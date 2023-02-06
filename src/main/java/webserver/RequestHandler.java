@@ -6,6 +6,7 @@ import java.nio.file.Files;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.MyUtil;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -17,20 +18,16 @@ public class RequestHandler extends Thread {
     }
 
     public void run() {
+        MyUtil util = new MyUtil();
         log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
                 connection.getPort());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
             DataOutputStream dos = new DataOutputStream(out);
-            byte[] body = "Hello World".getBytes();
+            byte[] body = util.getBody(in);
 
-            InputStreamReader reader = new InputStreamReader(in);
-            BufferedReader bufferedReader = new BufferedReader(reader);
-            String line = bufferedReader.readLine();
-            String[] tokens = line.split(" ");
-            String fileName = tokens[1];
-            body = Files.readAllBytes(new File("./webapp"+fileName).toPath());
+            if (body == null) body = "Hello World".getBytes();
 
             response200Header(dos, body.length);
             responseBody(dos, body);
