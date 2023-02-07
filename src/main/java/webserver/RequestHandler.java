@@ -2,14 +2,14 @@ package webserver;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.HashMap;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Map;
 
 import model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import util.HttpRequestUtils;
-import util.MyUtil;
 
 public class RequestHandler extends Thread {
     private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
@@ -21,31 +21,34 @@ public class RequestHandler extends Thread {
     }
 
     public void run() {
-        MyUtil util = new MyUtil();
         log.debug("New Client Connect! Connected IP : {}, Port : {}", connection.getInetAddress(),
                 connection.getPort());
 
         try (InputStream in = connection.getInputStream(); OutputStream out = connection.getOutputStream()) {
+            BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+            String line = br.readLine();
+
+            if (line == null) return;
+
+            String url = HttpRequestUtils.getUrl(line);
+
+            if (url.startsWith("/user/create")) {
+                int index = url.indexOf("?");
+                String queryString = url.substring(index+1);
+                Map<String, String> params = HttpRequestUtils.parseQueryString(queryString);
+                User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+                log.debug("User : {}",user);
+                url = "/index.html";
+            }
+            /*
+            while (!"".equals(line)) {
+                log.debug("header : {}",line);
+                line = br.readLine();
+            }*/
+
             // TODO 사용자 요청에 대한 처리는 이 곳에 구현하면 된다.
             DataOutputStream dos = new DataOutputStream(out);
-            Map<String,String> urlInfo = util.getUrlInfo(in);
-            String url = urlInfo.get("url");
-            String method = urlInfo.get("method");
-            String requestUrl = url;
-            byte[] body = util.getBody(url);
-
-            if (url.contains("?")) {
-                String[] request = url.split("\\?");
-                requestUrl = request[0];
-
-                Map<String, String> userInfo = HttpRequestUtils.parseQueryString(request[1]);
-                User user = new User(userInfo.get("userId"), userInfo.get("password"), userInfo.get("name"), userInfo.get("email"));
-                System.out.println(user);
-            }
-            System.out.println("method : " + method);
-            System.out.println("requestUrl : "+requestUrl);
-
-            if (body == null) body = "Hello World".getBytes();
+            byte[] body = Files.readAllBytes(new File("./webapp"+url).toPath());
 
             response200Header(dos, body.length);
             responseBody(dos, body);
