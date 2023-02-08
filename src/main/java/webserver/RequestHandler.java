@@ -66,15 +66,31 @@ public class RequestHandler extends Thread {
                     log.debug("User : {}",user);
 
                     DataBase.addUser(user);
+
+                    headerInfo.put("code",302);
+                    headerInfo.put("codeStr","Found");
+                    headerInfo.put("returnUrl","/index.html");
                 } else if(url.endsWith("login")) {
                     User user = DataBase.findUserById(params.get("userId"));
-                    
-                    headerInfo.put("cookie",setCookie(user, params));
-                }
 
-                headerInfo.put("code",302);
-                headerInfo.put("codeStr","Found");
-                headerInfo.put("returnUrl","/index.html");
+                    String returnStr = "";
+
+                    if (user == null) {
+                        log.debug("User Not Found");
+                        url = "/user/login_failed.html";
+                    } else if (user.getPassword().equals(params.get("password"))) {
+                        log.debug("login success");
+                        returnStr = "userId="+params.get("userId");
+
+                        headerInfo.put("cookie",returnStr);
+                        headerInfo.put("code",302);
+                        headerInfo.put("codeStr","Found");
+                        headerInfo.put("returnUrl","/index.html");
+                    } else {
+                        log.debug("Password Mismatch");
+                        url = "/user/login_failed.html";
+                    }
+                }
             }
             responseHeader(dos, headerInfo);
 
