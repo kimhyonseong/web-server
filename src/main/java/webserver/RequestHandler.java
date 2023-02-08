@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,8 +33,11 @@ public class RequestHandler extends Thread {
             String line = br.readLine();
 
             if (line == null) return;
+            String method = HttpRequestUtils.getMethod(line);
             String url = HttpRequestUtils.getUrl(line);
             Map<String,String> headers = new HashMap<>();
+
+            if (url.equals("/")) url = "/index.html";
 
             while (!"".equals(line)) {
                 log.debug("header : {}",line);
@@ -46,44 +50,39 @@ public class RequestHandler extends Thread {
 
             log.debug("Content-Length : {}",headers.get("Content-Length"));
             DataOutputStream dos = new DataOutputStream(out);
+            Map<String, Object> headerInfo = new HashMap<>();
+            headerInfo.put("code",200);
+            headerInfo.put("codeStr","OK");
+            headerInfo.put("Accept",headers.get("Accept"));
+            headerInfo.put("Sec-Fetch-Dest",headers.get("Sec-Fetch-Dest"));
 
-            if (url.startsWith("/user/create")) {
+            if (method.equals("POST")) {
                 String requestBody = IOUtils.readData(br,Integer.parseInt(headers.get("Content-Length")));
                 log.debug("Request Body : {}",requestBody);
                 Map<String, String> params = HttpRequestUtils.parseQueryString(requestBody);
-                User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
-                log.debug("User : {}",user);
 
-                DataBase.addUser(user);
-                response302Header(dos);
-            } else if(url.equals("/user/login")) {
-                String requestBody = IOUtils.readData(br,Integer.parseInt(headers.get("Content-Length")));
-                log.debug("Request Body : {}",requestBody);
-                Map<String, String> params = HttpRequestUtils.parseQueryString(requestBody);
-                log.debug("userId : {}, password : {}",params.get("userId"), params.get("password"));
+                if (url.endsWith("create")) {
+                    User user = new User(params.get("userId"), params.get("password"), params.get("name"), params.get("email"));
+                    log.debug("User : {}",user);
 
-                User user = DataBase.findUserById(params.get("userId"));
-
-                if (user == null) {
-                    log.debug("User Not Found");
-                    response302Header(dos);
-                } else if (user.getPassword().equals(params.get("password"))) {
-                    log.debug("login success");
-                    response302HeaderWithCookie(dos,"logined=true");
-                } else {
-                    log.debug("Password Mismatch");
-                    response302Header(dos);
+                    DataBase.addUser(user);
+                } else if(url.endsWith("login")) {
+                    User user = DataBase.findUserById(params.get("userId"));
+                    
+                    headerInfo.put("cookie",setCookie(user, params));
                 }
-            } else if(url.endsWith(".css")) {
-                byte[] body = Files.readAllBytes(new File("./webapp"+url).toPath());
 
-                response200HeaderWithCss(dos, body.length);
-                responseBody(dos, body);
-            } else {
-                if (url.equals("/")) url = "/index.html";
-                byte[] body = Files.readAllBytes(new File("./webapp"+url).toPath());
+                headerInfo.put("code",302);
+                headerInfo.put("codeStr","Found");
+                headerInfo.put("returnUrl","/index.html");
+            }
+            responseHeader(dos, headerInfo);
 
-                response200Header(dos, body.length);
+            File file = new File("./webapp"+url);
+
+            if (file.exists()) {
+                byte[] body = Files.readAllBytes(new File("./webapp" + url).toPath());
+                headerInfo.put("contentLength", body.length);
                 responseBody(dos, body);
             }
         } catch (IOException e) {
@@ -91,48 +90,46 @@ public class RequestHandler extends Thread {
         }
     }
 
-    private void response302HeaderWithCookie(DataOutputStream dos,String cookie) {
+    private String setCookie(User user, Map<String, String> params) {
+        String returnStr = "";
+
+        if (user == null) {
+            log.debug("User Not Found");
+        } else if (user.getPassword().equals(params.get("password"))) {
+            log.debug("login success");
+            returnStr = "userId="+params.get("userId");
+        } else {
+            log.debug("Password Mismatch");
+        }
+
+        return returnStr;
+    }
+
+    private void responseHeader(DataOutputStream dos, Map<String,Object> headerInfo) {
         try {
-            dos.writeBytes("HTTP/1.1 302 Found\r\n");
-            dos.writeBytes("Content-Type:text/html\r\n");
-            dos.writeBytes("Location: /index.html\r\n");
-            dos.writeBytes("Set-Cookie: "+cookie+"; Domain=localhost; path=/\r\n");
+            dos.writeBytes("HTTP/1.1 "+headerInfo.get("code")+" "+headerInfo.get("codeStr")+" \r\n");
+            dos.writeBytes("Content-Type: "+getContentType(headerInfo)+";charset=utf-8\r\n");
+            dos.writeBytes("Content-Length: " + headerInfo.get("contentLength") + "\r\n");
+
+            if (headerInfo.containsKey("returnUrl"))
+                dos.writeBytes("Location: "+headerInfo.get("returnUrl")+"\r\n");
+
+            if (headerInfo.containsKey("cookie"))
+                dos.writeBytes("Set-Cookie: "+headerInfo.get("cookie")+"; Domain=localhost; path=/\r\n");
+
             dos.writeBytes("\r\n");
         } catch (IOException e) {
             log.error(e.getMessage());
         }
     }
 
-    private void response302Header(DataOutputStream dos) {
-        try {
-            dos.writeBytes("HTTP/1.1 302 Found \r\n");
-            dos.writeBytes("Location: /index.html\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
+    private String getContentType(Map<String,Object> headerInfo) {
+        String contentType = headerInfo.get("Accept").toString().split(",")[0];
 
-    private void response200HeaderWithCss(DataOutputStream dos, int lengthOfBodyContent) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/css;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-    }
+        if (headerInfo.get("Sec-Fetch-Dest").toString().contains("script"))
+            contentType = "application/javascript";
 
-    private void response200Header(DataOutputStream dos, int lengthOfBodyContent) {
-        try {
-            dos.writeBytes("HTTP/1.1 200 OK \r\n");
-            dos.writeBytes("Content-Type: text/html;charset=utf-8\r\n");
-            dos.writeBytes("Content-Length: " + lengthOfBodyContent + "\r\n");
-            dos.writeBytes("\r\n");
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
+        return contentType;
     }
 
     private void responseBody(DataOutputStream dos, byte[] body) {
