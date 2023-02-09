@@ -1,3 +1,5 @@
+package util;
+
 import org.junit.Test;
 import util.HttpRequest;
 
@@ -13,10 +15,21 @@ public class HttpRequestTest {
 
   @Test
   public void requestGet() throws FileNotFoundException {
-    InputStream in = new FileInputStream(new File(testDir+"Http_GET.txt"));
+    InputStream in = new FileInputStream(testDir+"Http_GET.txt");
     HttpRequest request = new HttpRequest(in);
 
     assertEquals("GET",request.getMethod());
+    assertEquals("/user/create",request.getPath());
+    assertEquals("keep-alive",request.getHeader("Connection"));
+    assertEquals("javajigi",request.getParameter("userId"));
+  }
+
+  @Test
+  public void requestPost() throws Exception{
+    InputStream in = new FileInputStream(testDir+"Http_POST.txt");
+    HttpRequest request = new HttpRequest(in);
+
+    assertEquals("POST",request.getMethod());
     assertEquals("/user/create",request.getPath());
     assertEquals("keep-alive",request.getHeader("Connection"));
     assertEquals("javajigi",request.getParameter("userId"));

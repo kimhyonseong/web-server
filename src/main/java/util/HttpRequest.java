@@ -28,6 +28,7 @@ public class HttpRequest {
     this.br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
     setLine();
     setHeader();
+    setParameter();
   }
 
   public String[] parseStr(String str, String regex) {
@@ -42,18 +43,9 @@ public class HttpRequest {
       this.line = this.br.readLine();
       String[] splits = parseStr(this.line," ");
 
-      if (splits != null) {
-        int index = splits[1].indexOf("?");
-
+      if (splits != null && splits.length > 1) {
         this.method = splits[0];
-
-        if (index > 0) {
-          this.path = splits[1].substring(0, index);
-        } else {
-          this.path = splits[1];
-        }
-
-        setParameter(splits[1].substring(index+1));
+        this.path = splits[1];
       }
     } catch (IOException e) {
       log.error("line error : {}",e.getMessage());
@@ -65,20 +57,36 @@ public class HttpRequest {
   }
 
   public String getPath() {
-    return this.path;
+    return this.path.split("\\?")[0];
   }
 
-  public void setParameter(String queryString) {
-    if (Objects.requireNonNull(queryString).length() > 0) {
-      String[] params = queryString.split("&");
+  public void setParameter() {
+    String queryString = "";
 
-      for (String param : params) {
-        String[] splits = param.split("=");
+    try {
+      if (getMethod().equals("GET")) {
+        int index = this.path.indexOf("?");
+        queryString = this.path.substring(index + 1);
+      }
 
-        if (splits.length > 1) {
-          this.parameter.put(splits[0], splits[1]);
+      if (getMethod().equals("POST")) {
+        queryString = this.br.readLine();
+        System.out.println("queryString : "+queryString);
+      }
+
+      if (Objects.requireNonNull(queryString).length() > 0) {
+        String[] params = queryString.split("&");
+
+        for (String param : params) {
+          String[] splits = param.split("=");
+
+          if (splits.length > 1) {
+            this.parameter.put(splits[0], splits[1]);
+          }
         }
       }
+    } catch (IOException e) {
+      log.error("set parameter error : {}", e.getMessage());
     }
   }
 
