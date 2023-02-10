@@ -1,5 +1,3 @@
-package util;
-
 import org.junit.Test;
 import util.HttpRequest;
 

@@ -130,6 +130,7 @@ public class RequestHandler extends Thread {
         DataOutputStream dos = new DataOutputStream(out);
         byte[] body = Files.readAllBytes(new File("./webapp"+url).toPath());
         response200Header(dos,body.length);
+        responseBody(dos,body);
     }
 
     private void response200Header(DataOutputStream dos, int length) {
