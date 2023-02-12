@@ -1,7 +1,6 @@
 package util;
 
 import org.junit.Test;
-import util.MyHttpRequest;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -15,7 +14,7 @@ public class HttpRequestTest {
   @Test
   public void requestGet() throws FileNotFoundException {
     InputStream in = new FileInputStream(testDir+"Http_GET.txt");
-    MyHttpRequest request = new MyHttpRequest(in);
+    HttpRequest request = new HttpRequest(in);
 
     assertEquals("GET",request.getMethod());
     assertEquals("/user/create",request.getPath());
