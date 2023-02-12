@@ -7,22 +7,21 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
 
-public class HttpResponse {
+public class MyHttpResponse {
   private final String dir = "./webapp";
-  private static Logger log = LoggerFactory.getLogger(HttpResponse.class);
+  private static Logger log = LoggerFactory.getLogger(MyHttpResponse.class);
 
   private String line;
   private DataOutputStream os;
   private Map<String, String> header = new HashMap<>();
 
-  public HttpResponse() {}
+  public MyHttpResponse() {}
 
-  public HttpResponse(OutputStream os) {
+  public MyHttpResponse(OutputStream os) {
     this.os = new DataOutputStream(os);
   }
 
