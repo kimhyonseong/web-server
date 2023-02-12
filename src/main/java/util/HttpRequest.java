@@ -10,113 +10,75 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public class HttpRequest {
-  private static final Logger log = LoggerFactory.getLogger(HttpRequest.class);
+  private static Logger log = LoggerFactory.getLogger(HttpRequest.class);
 
-  private BufferedReader br;
-  private String line;
   private String method;
   private String path;
-  private Map<String,String> header = new HashMap<>();
-  private Map<String,String> parameter = new HashMap<>();
+  private Map<String,String> headers = new HashMap<>();
+  private Map<String,String> params = new HashMap<>();
 
-  public HttpRequest() {}
-
-  public HttpRequest(InputStream is) {
-    this.br = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
-    setLine();
-    setHeader();
-    setParameter();
-  }
-
-  public String[] parseStr(String str, String regex) {
-    if (str == null || str.length() < 1 || regex == null) {
-      return null;
-    }
-    return str.split(regex);
-  }
-
-  public void setLine() {
+  public HttpRequest(InputStream in) {
     try {
-      this.line = this.br.readLine();
-      String[] splits = parseStr(this.line," ");
+      BufferedReader br = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
+      String line = br.readLine();
 
-      if (splits != null && splits.length > 1) {
-        this.method = splits[0];
-        this.path = splits[1];
+      if (line == null) {
+        return;
+      }
+
+      processRequestLine(line);
+
+      line = br.readLine();
+      while (!line.equals("")) {
+        log.debug("header : {}",line);
+        String[] tokens = line.split(":");
+        headers.put(tokens[0].trim(),tokens[1].trim());
+        line = br.readLine();
+      }
+
+      if ("POST".equals(method)) {
+        String body = IOUtils.readData(br,Integer.parseInt(headers.get("Content-Length")));
+        params = HttpRequestUtils.parseQueryString(body);
       }
     } catch (IOException e) {
-      log.error("line error : {}",e.getMessage());
+      log.error(e.getMessage());
+    }
+  }
+
+  private void processRequestLine(String requestLine) {
+    log.debug("request line : {}",requestLine);
+    String[] tokens = requestLine.split(" ");
+    method = tokens[0];
+
+    if ("POST".equals(method)) {
+      path = tokens[1];
+      return;
+    }
+
+    int index = tokens[1].indexOf("?");
+    if (index == -1) {
+      path = tokens[1];
+    } else {
+      path = tokens[1].substring(0,index);
+      params = HttpRequestUtils.parseQueryString(tokens[1].substring(index+1));
     }
   }
 
   public String getMethod() {
-    return this.method;
+    return method;
   }
 
   public String getPath() {
-    return this.path.split("\\?")[0];
+    return path;
   }
 
-  public void setParameter() {
-    String queryString = "";
-
-    try {
-      if (getMethod().equals("GET")) {
-        int index = this.path.indexOf("?");
-        queryString = this.path.substring(index + 1);
-      }
-
-      if (getMethod().equals("POST")) {
-        queryString = this.br.readLine();
-        System.out.println("queryString : "+queryString);
-      }
-
-      if (Objects.requireNonNull(queryString).length() > 0) {
-        String[] params = queryString.split("&");
-
-        for (String param : params) {
-          String[] splits = param.split("=");
-
-          if (splits.length > 1) {
-            this.parameter.put(splits[0], splits[1]);
-          }
-        }
-      }
-    } catch (IOException e) {
-      log.error("set parameter error : {}", e.getMessage());
-    }
+  public String getHeader(String name) {
+    return headers.get(name);
   }
 
-  public String getParameter(String key) {
-    // java 1.8
-    return this.parameter.getOrDefault(key, null);
-  }
-
-  public void setHeader() {
-    try {
-      while (!this.line.equals("")) {
-        this.line = this.br.readLine();
-        String[] parse = parseStr(this.line,":");
-
-        log.debug("this.line {}",this.line);
-
-        if (parse != null && parse.length > 1) {
-          this.header.put(parse[0].trim(), parse[1].trim());
-        }
-        
-        if (this.line == null) {
-          return;
-        }
-      }
-    } catch (IOException e) {
-      log.error("set pa");
-    }
-  }
-
-  public String getHeader(String key) {
-    return this.header.getOrDefault(key, null);
+  public String getParameter(String name) {
+    return params.get(name);
   }
 }

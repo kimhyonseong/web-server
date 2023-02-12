@@ -1,7 +1,8 @@
-import org.junit.Test;
-import util.HttpRequest;
+package util;
 
-import java.io.File;
+import org.junit.Test;
+import util.MyHttpRequest;
+
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -14,7 +15,7 @@ public class HttpRequestTest {
   @Test
   public void requestGet() throws FileNotFoundException {
     InputStream in = new FileInputStream(testDir+"Http_GET.txt");
-    HttpRequest request = new HttpRequest(in);
+    MyHttpRequest request = new MyHttpRequest(in);
 
     assertEquals("GET",request.getMethod());
     assertEquals("/user/create",request.getPath());
@@ -25,7 +26,7 @@ public class HttpRequestTest {
   @Test
   public void requestPost() throws Exception{
     InputStream in = new FileInputStream(testDir+"Http_POST.txt");
-    HttpRequest request = new HttpRequest(in);
+    MyHttpRequest request = new MyHttpRequest(in);
 
     assertEquals("POST",request.getMethod());
     assertEquals("/user/create",request.getPath());
