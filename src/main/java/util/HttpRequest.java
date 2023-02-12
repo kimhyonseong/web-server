@@ -35,18 +35,22 @@ public class HttpRequest {
         String[] tokens = line.split(":");
         headers.put(tokens[0].trim(),tokens[1].trim());
         line = br.readLine();
+
+        if (line == null) break;
       }
 
-      if ("POST".equals(getMethod())) {
+      if (getMethod().isPost()) {
         String body = IOUtils.readData(br,Integer.parseInt(headers.get("Content-Length")));
         params = HttpRequestUtils.parseQueryString(body);
+      } else {
+        params = requestLine.getParams();
       }
     } catch (IOException e) {
       log.error(e.getMessage());
     }
   }
 
-  public String getMethod() {
+  public HttpMethod getMethod() {
     return requestLine.getMethod();
   }
 
