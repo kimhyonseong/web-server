@@ -1,5 +1,7 @@
 package util;
 
+import http.HttpRequest;
+import http.MyHttpRequest;
 import org.junit.Test;
 
 import java.io.FileInputStream;
