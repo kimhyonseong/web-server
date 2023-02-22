@@ -11,7 +11,7 @@ public class HttpSession {
     this.id = id;
   }
 
-  public void setAttribute(String name,HttpSession value) {
+  public void setAttribute(String name,Object value) {
     values.put(name,value);
   }
 
