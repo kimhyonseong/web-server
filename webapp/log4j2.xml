@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="debug" name="RoutingLog" monitorInterval="30">
+    <!--
+    패턴 참고
+    https://kwonnam.pe.kr/wiki/java/log4j/pattern
+     -->
+    <Properties>
+        <Property name="logName">/data2/logs/tomcat_2/$d{yyyy}/log4j.log</Property>
+        <Property name="layoutPattern">%d{yyyy MM dd HH:mm:ss, SSS} [%t] %-5level %c(%M:%L) - %m%n</Property>
+    </Properties>
+
+    <Appenders>
+        <Console name="STDOUT" target="SYSTEM_OUT">
+            <PatternLayout pattern="${layoutPattern}"/>
+        </Console>
+        <Routing name="Routing">
+            <Routes pattern="$${sd:type}">
+                <Route>
+                    <RollingFile name="Rolling-${sd:type}" fileName="${logName}"
+                                 filePattern="/data2/logs/tomcat_2/$d{yyyy}/log4j.$d{yyyy-MM-dd}.gz">
+                        <PatternLayout>
+                            <pattern>%d %p %c{1.} [%t] %m%n</pattern>
+                        </PatternLayout>
+                        <!-- 제한 정책 -->
+                        <TimeBasedTriggeringPolicy interval="1" modulate="true" />
+                        <SizeBasedTriggeringPolicy size="500 MB" />
+                    </RollingFile>
+                </Route>
+            </Routes>
+            <!-- 전송되지 않고 살아있어야 하는 시간 -->
+            <IdlePurgePolicy timeToLive="15" timeUnit="minutes"/>
+        </Routing>
+
+    </Appenders>
+
+    <Loggers>
+        <!-- 로그 기본 레벨 -->
+        <Root level="error">
+            <AppenderRef ref="STDOUT"/>
+            <AppenderRef ref="Routing"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

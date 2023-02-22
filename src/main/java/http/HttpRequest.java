@@ -2,10 +2,7 @@ package http;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import util.HttpMethod;
-import util.HttpRequestUtils;
-import util.IOUtils;
-import util.RequestLine;
+import util.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -68,5 +65,9 @@ public class HttpRequest {
 
   public String getParameter(String name) {
     return params.get(name);
+  }
+
+  public HttpCookie getCookies() {
+    return new HttpCookie(getHeader("Cookie"));
   }
 }
